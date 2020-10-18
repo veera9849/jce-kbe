@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:crypto="http://www.mulesoft.org/schema/mule/crypto"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/crypto http://www.mulesoft.org/schema/mule/crypto/current/mule-crypto.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="0ff712be-efe7-4fe6-a2b4-373753f0ce22" >
+		<http:listener-connection host="localhost" port="8081" />
+	</http:listener-config>
+	<crypto:jce-config name="Crypto_Jce" doc:name="Crypto Jce" doc:id="85334360-ff94-4cd9-a218-ba6f977730b8" keystore="aeskeystore.jck" type="JCEKS" password="mulesoft" >
+		<crypto:jce-key-infos >
+			<crypto:jce-symmetric-key-info keyId="aes128" alias="aeskey" password="mulesoft" />
+		</crypto:jce-key-infos>
+	</crypto:jce-config>
+	<crypto:jce-config name="Crypto_Jce1" doc:name="Crypto Jce" doc:id="27d56a56-7f46-4634-a070-e82c5ea68cb8" keystore="aeskeystore.jck" type="JCEKS" password="mulesoft" >
+		<crypto:jce-key-infos >
+			<crypto:jce-symmetric-key-info keyId="aes128" alias="aeskey" password="mulesoft" />
+		</crypto:jce-key-infos>
+	</crypto:jce-config>
+	<flow name="jce-kbe-usecaseFlow" doc:id="62e5c1e4-8913-404f-8ab8-2d845694be33" >
+		<http:listener doc:name="Listener" doc:id="089df5a7-36ce-48ab-ae7c-0ecc37627060" config-ref="HTTP_Listener_config" path="/jcekbeencryption"/>
+		<logger level="INFO" doc:name="Logger" doc:id="7682947e-70da-4ae5-9b95-13a5604cf38b" message='"Request before encrypt :" #[payload] '/>
+		<crypto:jce-encrypt doc:name="Jce encrypt" doc:id="48565acf-c37f-401a-a093-4d161729828d" config-ref="Crypto_Jce" algorithm="AES" keyId="aes128"/>
+		<ee:transform doc:name="Transform Message" doc:id="fc897dc5-c7c3-4a8b-b6b4-e6fac292924b" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+import dw::Crypto
+import toBase64 from dw::core::Binaries
+output application/json
+---
+toBase64(payload)]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<set-payload value="#[payload]" doc:name="Set Payload" doc:id="0e0424b4-ab52-4db3-971a-de5665fb91db" />
+	</flow>
+	<flow name="jce-kbe-usecaseFlow1" doc:id="0e252d2b-77bb-4357-9179-1bed5c57d751" >
+		<http:listener doc:name="Listener" doc:id="75cef711-f320-459a-a95a-fa0a7e723c80" config-ref="HTTP_Listener_config" path="/jcekbedecrypt"/>
+		<ee:transform doc:name="Transform Message" doc:id="be8f15f4-65e8-429f-a151-715ef9cba1c8" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+import fromBase64 from  dw::core::Binaries
+output application/octet-stream
+---
+fromBase64(payload)]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<crypto:jce-decrypt doc:name="Jce decrypt" doc:id="e4b4f52c-b877-4dd2-b000-21837f30a24e" config-ref="Crypto_Jce1" algorithm="AES" keyId="aes128"/>
+		<set-payload value="#[payload]" doc:name="Set Payload" doc:id="2c605c40-e48d-4409-9b43-b34bfe7d1f04" />
+	</flow>
+</mule>
